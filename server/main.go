@@ -2,23 +2,19 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"path/filepath"
 
-	"github.com/gorilla/websocket"
+	"github.com/tokonoma-art/tokonoma/pkg/websocket"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 var (
 	current  = "default"
-	upgrader = websocket.Upgrader{}
-	lastWS   *websocket.Conn
+	basePath string
 )
-
-var basePath string
 
 func init() {
 	flag.StringVar(&basePath, "app-path", "..", "path to the app folder")
@@ -50,7 +46,25 @@ func main() {
 	// Expose artworks
 	e.Static("/artworks", "../storage/artworks")
 
-	// Expose API
+	// Expose WS canvas API
+	pool := websocket.NewCanvasPool()
+	go pool.Start()
+	e.GET("/ws", func(c echo.Context) (err error) {
+		ws, err := websocket.Upgrade(c)
+		if err == nil {
+			client := &websocket.CanvasClient{Conn: ws}
+			pool.Register <- client
+			defer func() {
+				pool.Unregister <- client
+				ws.Close()
+			}()
+			client.Conn.WriteJSON(websocket.CurrentArtworkCanvasMessage{ArtworkKey: current})
+			client.Start()
+		}
+		return
+	})
+
+	// Expose HTTP controller API
 	api := e.Group("/api/v1")
 
 	api.GET("/canvases/default", func(c echo.Context) error {
@@ -63,43 +77,10 @@ func main() {
 			return
 		}
 		current = ca.Artwork
-		if lastWS != nil {
-			lastWS.WriteJSON(ca)
-		}
+		pool.Broadcast <- websocket.CurrentArtworkCanvasMessage{ArtworkKey: current}
 		return c.JSON(http.StatusOK, ca)
 	})
 
-	e.GET("/ws", wsAPI)
-
 	// Start the server
 	e.Logger.Fatal(e.Start(":1323"))
-}
-
-func wsAPI(c echo.Context) (err error) {
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
-	if err != nil {
-		return
-	}
-	defer ws.Close()
-
-	log.Println("Client Connected")
-	lastWS = ws
-	reader(ws)
-
-	return nil
-}
-
-func reader(conn *websocket.Conn) {
-	for {
-		// read in a message
-		_, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		// print out that message for clarity
-		fmt.Println(string(p))
-
-	}
 }

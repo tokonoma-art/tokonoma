@@ -1,5 +1,9 @@
 import './index.scss';
 
+interface Message {
+  artworkKey: string;
+}
+
 function buildWSURL() {
   const loc = window.location;
   const protocol = (loc.protocol === 'https' ? 'wss' : 'ws');
@@ -17,7 +21,7 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (evt) => {
-  const artworkKey: string = JSON.parse(evt.data).artwork;
+  const { artworkKey }: Message = JSON.parse(evt.data);
   const http = new XMLHttpRequest();
   const url = `/artworks/${artworkKey}.json`;
   http.open('GET', url);
