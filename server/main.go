@@ -1,9 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -16,6 +18,13 @@ var (
 	lastWS   *websocket.Conn
 )
 
+var basePath string
+
+func init() {
+	flag.StringVar(&basePath, "app-path", "..", "path to the app folder")
+	flag.Parse()
+}
+
 // CurrentArtwork represents an artwork key
 type CurrentArtwork struct {
 	Artwork string `json:"artwork"`
@@ -25,7 +34,7 @@ func main() {
 
 	e := echo.New()
 
-	// e.Use(middleware.Logger())
+	e.Use(middleware.Logger())
 	// e.Use(middleware.Recover())
 
 	// Expose home page
@@ -35,8 +44,8 @@ func main() {
 
 	// Expose client
 	e.Pre(middleware.RemoveTrailingSlash())
-	e.File("/canvas", "../client/dist/index.html")
-	e.Static("/canvas", "../client/dist")
+	e.File("/canvas", filepath.Join(basePath, "client/dist/index.html"))
+	e.Static("/canvas", filepath.Join(basePath, "client/dist"))
 
 	// Expose artworks
 	e.Static("/artworks", "../storage/artworks")
