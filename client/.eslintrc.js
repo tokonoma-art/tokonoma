@@ -20,4 +20,7 @@ module.exports = {
   ],
   rules: {
   },
+  settings: {
+    react: { version: "16.0" } // simply to avoid a warning, because react comes from airbnb
+  }
 };
