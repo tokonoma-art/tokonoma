@@ -12,12 +12,14 @@ import (
 )
 
 var (
-	current  = "default"
-	basePath string
+	current     = "default"
+	appPath     string
+	storagePath string
 )
 
 func init() {
-	flag.StringVar(&basePath, "app-path", "..", "path to the app folder")
+	flag.StringVar(&appPath, "app", "..", "path to the app folder")
+	flag.StringVar(&storagePath, "storage", "../storage", "path to the storage folder")
 	flag.Parse()
 }
 
@@ -40,11 +42,11 @@ func main() {
 
 	// Expose client
 	e.Pre(middleware.RemoveTrailingSlash())
-	e.File("/canvas", filepath.Join(basePath, "client/dist/index.html"))
-	e.Static("/canvas", filepath.Join(basePath, "client/dist"))
+	e.File("/canvas", filepath.Join(appPath, "client/dist/index.html"))
+	e.Static("/canvas", filepath.Join(appPath, "client/dist"))
 
 	// Expose artworks
-	e.Static("/artworks", "../storage/artworks")
+	e.Static("/artworks", filepath.Join(storagePath, "artworks"))
 
 	// Expose WS canvas API
 	pool := websocket.NewCanvasPool()

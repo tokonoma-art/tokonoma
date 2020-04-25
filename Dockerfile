@@ -29,4 +29,4 @@ COPY --from=server-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=server-builder /app/server/main /app/server/main
 COPY --from=client-builder /app/client/dist /app/client/dist
 # Run the server on start
-CMD ["/app/server/main", "--app-path", "/app"]
+CMD ["/app/server/main", "--app", "/app", "--storage", "/var/lib/tokonoma"]

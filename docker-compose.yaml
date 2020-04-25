@@ -1,0 +1,12 @@
+---
+version: "3.7"
+
+services:
+  tokonoma:
+    container_name: tokonoma
+    build: .
+    restart: always
+    ports:
+      - 1323:1323
+    volumes:
+      - ./storage:/var/lib/tokonoma
