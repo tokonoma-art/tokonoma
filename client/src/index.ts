@@ -15,7 +15,7 @@ function buildWSURL() {
 const body = document.getElementsByTagName('body')[0];
 
 function updateRotation(rotation: number) {
-  body.classList.remove('rotation-0', 'rotation-90', 'rotation-180', 'roattion-270');
+  body.classList.remove('rotation-0', 'rotation-90', 'rotation-180', 'rotation-270');
   if ([0, 90, 180, 270].includes(rotation)) {
     body.classList.add(`rotation-${rotation}`);
   } else {
