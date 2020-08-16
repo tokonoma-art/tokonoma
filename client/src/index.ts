@@ -1,4 +1,5 @@
 import './index.scss';
+import './artwork-element.ts';
 
 interface Message {
   artworkKey: string;
@@ -10,10 +11,9 @@ function buildWSURL() {
   return `${protocol}://${loc.host}/ws`;
 }
 
-const ws = new WebSocket(buildWSURL());
+const artworkElement = document.getElementById('current-artwork');
 
-const current = <HTMLElement>document.getElementsByClassName('current')[0];
-const currentArtworkKeySpan = document.getElementsByClassName('current-artwork-key')[0];
+const ws = new WebSocket(buildWSURL());
 
 ws.onopen = () => {
   console.log('Connected!');
@@ -22,16 +22,5 @@ ws.onopen = () => {
 
 ws.onmessage = (evt) => {
   const { artworkKey }: Message = JSON.parse(evt.data);
-  const http = new XMLHttpRequest();
-  const url = `/artworks/${artworkKey}.json`;
-  http.open('GET', url);
-  http.send();
-  http.onreadystatechange = () => {
-    if (http.readyState === 4 && http.status === 200) {
-      const artwork = JSON.parse(http.responseText);
-      console.log(artwork);
-      currentArtworkKeySpan.textContent = artwork.key;
-      current.style.backgroundColor = artwork.color;
-    }
-  };
+  artworkElement.setAttribute('src', `/artworks/${artworkKey}.artbundle`);
 };

@@ -1,0 +1,14 @@
+{
+  "title": "Hello World",
+  "author": "Olivier Guerriat",
+  "license": "MIT",
+  "artwork": [
+    {
+      "format": "image",
+      "orientation": "both",
+      "configuration": {
+        "image": "landscape.png"
+      }
+    }
+  ]
+}

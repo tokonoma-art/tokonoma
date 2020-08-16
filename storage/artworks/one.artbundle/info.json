@@ -1,0 +1,14 @@
+{
+  "title": "one text",
+  "author": "Olivier Guerriat",
+  "license": "MIT",
+  "artwork": [
+    {
+      "format": "text",
+      "orientation": "both",
+      "configuration": {
+        "text": "one"
+      }
+    }
+  ]
+}

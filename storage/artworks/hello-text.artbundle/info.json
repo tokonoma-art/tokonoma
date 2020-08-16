@@ -1,0 +1,17 @@
+{
+  "title": "Hello World",
+  "author": "Olivier Guerriat",
+  "license": "MIT",
+  "artwork": [
+    {
+      "format": "text",
+      "orientation": "both",
+      "color": "#005B40",
+      "configuration": {
+        "text": "Hello World!",
+        "text-color": "#00845D",
+        "background-color": "#00FFB8"
+      }
+    }
+  ]
+}
