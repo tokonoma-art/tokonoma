@@ -2,9 +2,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"path/filepath"
 
+	"github.com/tokonoma-art/tokonoma/pkg/canvas"
 	"github.com/tokonoma-art/tokonoma/pkg/websocket"
 
 	"github.com/labstack/echo/v4"
@@ -12,9 +14,7 @@ import (
 )
 
 var (
-	pool            *websocket.CanvasPool
-	current         = "default"
-	currentRotation = websocket.Rotation0
+	managedCanvases = map[string]*websocket.ManagedCanvas{} // to ease future support for multiple canvases
 	appPath         string
 	storagePath     string
 )
@@ -25,27 +25,36 @@ func init() {
 	flag.Parse()
 }
 
-// CurrentArtwork represents an artwork key
-type CurrentArtwork struct {
-	Artwork string `json:"artwork"`
+// ArtbundleSetting represents the artbundle path setting
+type ArtbundleSetting struct {
+	Artbundle string `json:"artbundle"`
 }
 
-// CurrentRotation represents a rotation setting
-type CurrentRotation struct {
-	Rotation websocket.Rotation `json:"rotation"`
+// RotationSetting represents a rotation setting
+type RotationSetting struct {
+	Rotation canvas.Rotation `json:"rotation"`
 }
 
-func broadcastUpdate() {
-	pool.Broadcast <- websocket.CurrentArtworkCanvasMessage{
-		ArtworkKey: current,
-		Rotation:   currentRotation,
+// ExtractManagedCanvas is an Echo middleware that puts the managedCanvas in the context
+func ExtractManagedCanvas(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		key := c.Param("key")
+		if managedCanvas, ok := managedCanvases[key]; ok {
+			c.Set("managedCanvas", managedCanvas)
+			return next(c)
+		}
+		return c.String(http.StatusNotFound, fmt.Sprintf("Cannot find canvas '%s'.", key))
 	}
 }
 
 func main() {
 
-	e := echo.New()
+	// Create default canvas manually
+	managedCanvases["default"] = websocket.NewManagedCanvas("default")
 
+	// Configure the HTTP server…
+
+	e := echo.New()
 	e.Use(middleware.Logger())
 	// e.Use(middleware.Recover())
 
@@ -54,27 +63,27 @@ func main() {
 		return c.String(http.StatusOK, "Hello from Tokonoma!")
 	})
 
+	// Expose artworks
+	e.Static("/artworks", filepath.Join(storagePath, "artworks"))
+
 	// Expose client
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.File("/canvas", filepath.Join(appPath, "client/dist/index.html"))
 	e.Static("/canvas", filepath.Join(appPath, "client/dist"))
 
-	// Expose artworks
-	e.Static("/artworks", filepath.Join(storagePath, "artworks"))
-
 	// Expose WS canvas API
-	pool = websocket.NewCanvasPool()
-	go pool.Start()
+	// at the moment: "default" canvas is hard-coded
+	defaultManagedCanvas := managedCanvases["default"]
 	e.GET("/ws", func(c echo.Context) (err error) {
 		ws, err := websocket.Upgrade(c)
 		if err == nil {
 			client := &websocket.CanvasClient{Conn: ws}
-			pool.Register <- client
+			defaultManagedCanvas.ClientPool.Register <- client
 			defer func() {
-				pool.Unregister <- client
+				defaultManagedCanvas.ClientPool.Unregister <- client
 				ws.Close()
 			}()
-			client.Conn.WriteJSON(websocket.CurrentArtworkCanvasMessage{ArtworkKey: current})
+			defaultManagedCanvas.UpdateClient(client)
 			client.Start()
 		}
 		return
@@ -83,28 +92,33 @@ func main() {
 	// Expose HTTP controller API
 	api := e.Group("/api/v1")
 
-	api.GET("/canvases/default", func(c echo.Context) error {
-		return c.String(http.StatusOK, current)
+	canvasAPI := api.Group("/canvases/:key", ExtractManagedCanvas)
+
+	canvasAPI.GET("", func(c echo.Context) error {
+		managedCanvas := c.Get("managedCanvas").(*websocket.ManagedCanvas)
+		return c.JSON(http.StatusOK, managedCanvas.Canvas)
 	})
 
-	api.POST("/canvases/default/current", func(c echo.Context) (err error) {
-		ca := new(CurrentArtwork)
-		if err = c.Bind(ca); err != nil {
+	canvasAPI.POST("/artbundle", func(c echo.Context) (err error) {
+		managedCanvas := c.Get("managedCanvas").(*websocket.ManagedCanvas)
+		setting := new(ArtbundleSetting)
+		if err = c.Bind(setting); err != nil {
 			return
 		}
-		current = ca.Artwork
-		broadcastUpdate()
-		return c.JSON(http.StatusOK, ca)
+		managedCanvas.Canvas.Artbundle = setting.Artbundle
+		managedCanvas.BroadcastUpdate()
+		return c.JSON(http.StatusOK, setting)
 	})
 
-	api.POST("/canvases/default/rotation", func(c echo.Context) (err error) {
-		ca := new(CurrentRotation)
-		if err = c.Bind(ca); err != nil {
+	canvasAPI.POST("/rotation", func(c echo.Context) (err error) {
+		managedCanvas := c.Get("managedCanvas").(*websocket.ManagedCanvas)
+		setting := new(RotationSetting)
+		if err = c.Bind(setting); err != nil {
 			return
 		}
-		currentRotation = ca.Rotation
-		broadcastUpdate()
-		return c.JSON(http.StatusOK, ca)
+		managedCanvas.Canvas.Rotation = setting.Rotation
+		managedCanvas.BroadcastUpdate()
+		return c.JSON(http.StatusOK, setting)
 	})
 
 	// Start the server

@@ -4,22 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gorilla/websocket"
+	"github.com/tokonoma-art/tokonoma/pkg/canvas"
 )
-
-type Rotation int
-
-const (
-	Rotation0 Rotation = iota * 90
-	Rotation90
-	Rotation180
-	Rotation270
-)
-
-// CurrentArtworkCanvasMessage …
-type CurrentArtworkCanvasMessage struct {
-	ArtworkKey string   `json:"artworkKey"`
-	Rotation   Rotation `json:"rotation"`
-}
 
 // CanvasClient …
 type CanvasClient struct {
@@ -38,26 +24,26 @@ func (client *CanvasClient) Start() {
 	}
 }
 
-// CanvasPool …
-type CanvasPool struct {
+// CanvasClientPool …
+type CanvasClientPool struct {
 	Register   chan *CanvasClient
 	Unregister chan *CanvasClient
 	Clients    map[*CanvasClient]bool
-	Broadcast  chan CurrentArtworkCanvasMessage
+	Broadcast  chan canvas.Canvas
 }
 
-// NewCanvasPool …
-func NewCanvasPool() *CanvasPool {
-	return &CanvasPool{
+// NewCanvasClientPool …
+func NewCanvasClientPool() *CanvasClientPool {
+	return &CanvasClientPool{
 		Register:   make(chan *CanvasClient),
 		Unregister: make(chan *CanvasClient),
 		Clients:    make(map[*CanvasClient]bool),
-		Broadcast:  make(chan CurrentArtworkCanvasMessage),
+		Broadcast:  make(chan canvas.Canvas),
 	}
 }
 
 // Start …
-func (pool *CanvasPool) Start() {
+func (pool *CanvasClientPool) Start() {
 	for {
 		select {
 		case client := <-pool.Register:

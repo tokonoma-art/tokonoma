@@ -2,7 +2,7 @@ import './index.scss';
 import './artwork-element.ts';
 
 interface Message {
-  artworkKey: string;
+  artbundle: string;
   rotation: number;
 }
 
@@ -33,7 +33,7 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (evt) => {
-  const { artworkKey, rotation }: Message = JSON.parse(evt.data);
+  const { artbundle, rotation }: Message = JSON.parse(evt.data);
   updateRotation(rotation);
-  artworkElement.setAttribute('src', `/artworks/${artworkKey}.artbundle`);
+  artworkElement.setAttribute('src', `/artworks/${artbundle}`);
 };
