@@ -12,9 +12,11 @@ import (
 )
 
 var (
-	current     = "default"
-	appPath     string
-	storagePath string
+	pool            *websocket.CanvasPool
+	current         = "default"
+	currentRotation = websocket.Rotation0
+	appPath         string
+	storagePath     string
 )
 
 func init() {
@@ -26,6 +28,18 @@ func init() {
 // CurrentArtwork represents an artwork key
 type CurrentArtwork struct {
 	Artwork string `json:"artwork"`
+}
+
+// CurrentRotation represents a rotation setting
+type CurrentRotation struct {
+	Rotation websocket.Rotation `json:"rotation"`
+}
+
+func broadcastUpdate() {
+	pool.Broadcast <- websocket.CurrentArtworkCanvasMessage{
+		ArtworkKey: current,
+		Rotation:   currentRotation,
+	}
 }
 
 func main() {
@@ -49,7 +63,7 @@ func main() {
 	e.Static("/artworks", filepath.Join(storagePath, "artworks"))
 
 	// Expose WS canvas API
-	pool := websocket.NewCanvasPool()
+	pool = websocket.NewCanvasPool()
 	go pool.Start()
 	e.GET("/ws", func(c echo.Context) (err error) {
 		ws, err := websocket.Upgrade(c)
@@ -79,7 +93,17 @@ func main() {
 			return
 		}
 		current = ca.Artwork
-		pool.Broadcast <- websocket.CurrentArtworkCanvasMessage{ArtworkKey: current}
+		broadcastUpdate()
+		return c.JSON(http.StatusOK, ca)
+	})
+
+	api.POST("/canvases/default/rotation", func(c echo.Context) (err error) {
+		ca := new(CurrentRotation)
+		if err = c.Bind(ca); err != nil {
+			return
+		}
+		currentRotation = ca.Rotation
+		broadcastUpdate()
 		return c.JSON(http.StatusOK, ca)
 	})
 

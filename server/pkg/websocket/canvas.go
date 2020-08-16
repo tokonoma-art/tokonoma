@@ -6,9 +6,19 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type Rotation int
+
+const (
+	Rotation0 Rotation = iota * 90
+	Rotation90
+	Rotation180
+	Rotation270
+)
+
 // CurrentArtworkCanvasMessage …
 type CurrentArtworkCanvasMessage struct {
-	ArtworkKey string `json:"artworkKey"`
+	ArtworkKey string   `json:"artworkKey"`
+	Rotation   Rotation `json:"rotation"`
 }
 
 // CanvasClient …

@@ -12,6 +12,45 @@ body {
 
 #current-artwork {
   display: block;
-  width: 100%;
-  height: 100%;
+
+  &.debug {
+    border: 5px solid red;
+  }
+
+  // rotation class names based on macOS "terminology", not CSS values
+
+  .rotation-0 &, .rotation-180 & {
+    width: 100vw;
+    height: 100vh;
+
+    &.debug {
+      width: calc(100vw - 10px);
+      height: calc(100vh - 10px);
+    }
+  }
+
+  .rotation-180 & {
+    transform: rotate(180deg);
+  }
+
+  .rotation-90 &, .rotation-270 & {
+    width: 100vh;
+    height: 100vw;
+
+    &.debug {
+      width: calc(100vh - 10px);
+      height: calc(100vw - 10px);
+    }
+  }
+
+  .rotation-90 & {
+    transform: rotate(270deg);
+    transform-origin: 50vh 50vh;
+  }
+
+  .rotation-270 & {
+    transform: rotate(90deg);
+    transform-origin: 50vw 50vw;
+  }
+
 }
