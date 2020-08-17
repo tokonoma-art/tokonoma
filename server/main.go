@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/tokonoma-art/tokonoma/pkg/canvas"
 	"github.com/tokonoma-art/tokonoma/pkg/websocket"
@@ -13,16 +15,20 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+const artworksDirectory = "artworks"
+
 var (
 	managedCanvases = make(map[string]*websocket.ManagedCanvas) // to ease future support for multiple canvases
 	appPath         string
 	storagePath     string
+	artworksPath    string
 )
 
 func init() {
 	flag.StringVar(&appPath, "app", "..", "path to the app folder")
 	flag.StringVar(&storagePath, "storage", "../storage", "path to the storage folder")
 	flag.Parse()
+	artworksPath = filepath.Join(storagePath, artworksDirectory)
 }
 
 // ArtbundleSetting represents the artbundle path setting
@@ -64,7 +70,7 @@ func main() {
 	})
 
 	// Expose artworks
-	e.Static("/artworks", filepath.Join(storagePath, "artworks"))
+	e.Static("/artworks", artworksPath)
 
 	// Expose client
 	e.Pre(middleware.RemoveTrailingSlash())
@@ -91,6 +97,21 @@ func main() {
 
 	// Expose HTTP controller API
 	api := e.Group("/api/v1")
+
+	// Lists all available artworks
+	api.GET("/artworks", func(c echo.Context) (err error) {
+		files, err := ioutil.ReadDir(artworksPath)
+		if err != nil {
+			return
+		}
+		artworks := []string{}
+		for _, f := range files {
+			if name := f.Name(); strings.HasSuffix(name, ".artbundle") {
+				artworks = append(artworks, name)
+			}
+		}
+		return c.JSON(http.StatusOK, artworks)
+	})
 
 	// Lists all canvases
 	api.GET("/canvases", func(c echo.Context) error {
