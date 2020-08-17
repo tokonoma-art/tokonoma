@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	managedCanvases = map[string]*websocket.ManagedCanvas{} // to ease future support for multiple canvases
+	managedCanvases = make(map[string]*websocket.ManagedCanvas) // to ease future support for multiple canvases
 	appPath         string
 	storagePath     string
 )
@@ -92,13 +92,25 @@ func main() {
 	// Expose HTTP controller API
 	api := e.Group("/api/v1")
 
+	// Lists all canvases
+	api.GET("/canvases", func(c echo.Context) error {
+		keys := []string{}
+		for key := range managedCanvases {
+			keys = append(keys, key)
+		}
+		return c.JSON(http.StatusOK, keys)
+	})
+
+	// API about one specific canvas
 	canvasAPI := api.Group("/canvases/:key", ExtractManagedCanvas)
 
+	// Returns canvas' current settings
 	canvasAPI.GET("", func(c echo.Context) error {
 		managedCanvas := c.Get("managedCanvas").(*websocket.ManagedCanvas)
 		return c.JSON(http.StatusOK, managedCanvas.Canvas)
 	})
 
+	// Sets the canvas' artbundle
 	canvasAPI.POST("/artbundle", func(c echo.Context) (err error) {
 		managedCanvas := c.Get("managedCanvas").(*websocket.ManagedCanvas)
 		setting := new(ArtbundleSetting)
@@ -110,6 +122,7 @@ func main() {
 		return c.JSON(http.StatusOK, setting)
 	})
 
+	// Sets the canvas' rotation
 	canvasAPI.POST("/rotation", func(c echo.Context) (err error) {
 		managedCanvas := c.Get("managedCanvas").(*websocket.ManagedCanvas)
 		setting := new(RotationSetting)
